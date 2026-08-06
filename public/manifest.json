@@ -1,0 +1,18 @@
+{
+  "short_name": "이리가",
+  "name": "이리가 (Lee-Ri-Ga) - 모바일 여행 동선 플래너",
+  "description": "모바일 환경에 최적화된 여행 동선 최적화 플래너 앱",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#070C18",
+  "theme_color": "#0F172A",
+  "display": "standalone",
+  "orientation": "portrait"
+}

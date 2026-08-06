@@ -20,6 +20,7 @@
   margin: 0;
   padding: 0;
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 
 body {
@@ -27,18 +28,19 @@ body {
   background-color: #020617;
   color: var(--text-main);
   min-height: 100vh;
+  min-height: -webkit-fill-available;
   display: flex;
   justify-content: center;
   align-items: center;
   overflow: hidden;
 }
 
-/* Mobile Container Enclosure (Optimized for iPhone 15 Pro 393px width) */
+/* Mobile Container Enclosure (Full Width Optimized for iPhone 15 Pro & PWA Standalone Mode) */
 .mobile-app-wrapper {
   width: 100%;
-  max-width: 430px;
+  max-width: 480px;
   height: 100vh;
-  max-height: 932px;
+  height: 100dvh;
   background: var(--bg-primary);
   display: flex;
   flex-direction: column;
@@ -48,24 +50,34 @@ body {
   border-radius: 0;
 }
 
-@media (min-width: 480px) {
+@media (max-width: 480px) {
   .mobile-app-wrapper {
-    border-radius: 36px;
-    height: 92vh;
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
   }
 }
 
-/* Slim Top Header Bar (Minimized Height) */
+@media (min-width: 481px) {
+  .mobile-app-wrapper {
+    border-radius: 32px;
+    height: 94vh;
+    max-height: 932px;
+  }
+}
+
+/* Slim Top Header Bar (Minimized Height & iOS Notch Safe Area Support) */
 .top-header-bar {
   background: var(--bg-header);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-subtle);
-  padding: 8px 12px;
+  padding: max(6px, env(safe-area-inset-top)) 10px 6px 10px;
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   flex-shrink: 0;
 }
@@ -279,7 +291,7 @@ input:checked + .slider:before {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   background: var(--bg-primary);
-  padding: 10px 10px 24px 10px;
+  padding: 10px 10px calc(28px + env(safe-area-inset-bottom)) 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -351,10 +363,11 @@ input:checked + .slider:before {
 /* High Contrast Elevated Timeline Card */
 .timeline-card {
   flex: 1;
+  min-width: 0; /* CRITICAL FOR FLEXBOX TRUNCATION */
   background: linear-gradient(145deg, rgba(22, 33, 56, 0.95), rgba(15, 23, 42, 0.92));
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
-  padding: 8px 10px;
+  padding: 8px 12px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -391,10 +404,16 @@ input:checked + .slider:before {
 .cat-hotel { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); }
 
 .card-title {
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #f8fafc;
-  line-height: 1.25;
+  line-height: 1.3;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .card-details {

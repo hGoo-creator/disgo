@@ -1,4 +1,5 @@
-import { MyPlace, Accommodation, TripSettings } from '../types';
+import { MyPlace, Accommodation, TripSettings, RegionType } from '../types';
+import { SupabaseDB, isSupabaseConfigured } from './supabase';
 
 const STORAGE_KEYS = {
   MY_PLACES_DOMESTIC: 'leeriga_places_domestic',
@@ -130,8 +131,8 @@ const SEED_SETTINGS: TripSettings = {
 };
 
 export const DB = {
-  // MyPlaces (Domestic or International based on region)
-  getMyPlaces(region: '국내' | '해외' = '국내'): MyPlace[] {
+  // Synchronous LocalStorage Fallbacks
+  getMyPlaces(region: RegionType = '국내'): MyPlace[] {
     const key = region === '해외' ? STORAGE_KEYS.MY_PLACES_INTL : STORAGE_KEYS.MY_PLACES_DOMESTIC;
     const seed = region === '해외' ? SEED_PLACES_INTL : SEED_PLACES_DOMESTIC;
     const data = localStorage.getItem(key);
@@ -146,12 +147,12 @@ export const DB = {
     }
   },
 
-  saveMyPlaces(places: MyPlace[], region: '국내' | '해외' = '국내'): void {
+  saveMyPlaces(places: MyPlace[], region: RegionType = '국내'): void {
     const key = region === '해외' ? STORAGE_KEYS.MY_PLACES_INTL : STORAGE_KEYS.MY_PLACES_DOMESTIC;
     localStorage.setItem(key, JSON.stringify(places));
   },
 
-  addMyPlace(place: Omit<MyPlace, 'id'>, region: '국내' | '해외' = '국내'): MyPlace {
+  addMyPlace(place: Omit<MyPlace, 'id'>, region: RegionType = '국내'): MyPlace {
     const places = this.getMyPlaces(region);
     const newPlace: MyPlace = {
       ...place,
@@ -162,18 +163,17 @@ export const DB = {
     return newPlace;
   },
 
-  deleteMyPlace(id: string, region: '국내' | '해외' = '국내'): void {
+  deleteMyPlace(id: string, region: RegionType = '국내'): void {
     const places = this.getMyPlaces(region).filter((p) => p.id !== id);
     this.saveMyPlaces(places, region);
   },
 
-  clearMyPlaces(region: '국내' | '해외' = '국내'): void {
+  clearMyPlaces(region: RegionType = '국내'): void {
     const key = region === '해외' ? STORAGE_KEYS.MY_PLACES_INTL : STORAGE_KEYS.MY_PLACES_DOMESTIC;
     localStorage.setItem(key, JSON.stringify([]));
   },
 
-  // Accommodations
-  getAccommodation(region: '국내' | '해외' = '국내'): Accommodation {
+  getAccommodation(region: RegionType = '국내'): Accommodation {
     const key = region === '해외' ? STORAGE_KEYS.ACC_INTL : STORAGE_KEYS.ACC_DOMESTIC;
     const seed = region === '해외' ? SEED_ACC_INTL : SEED_ACC_DOMESTIC;
     const data = localStorage.getItem(key);
@@ -188,12 +188,11 @@ export const DB = {
     }
   },
 
-  saveAccommodation(acc: Accommodation, region: '국내' | '해외' = '국내'): void {
+  saveAccommodation(acc: Accommodation, region: RegionType = '국내'): void {
     const key = region === '해외' ? STORAGE_KEYS.ACC_INTL : STORAGE_KEYS.ACC_DOMESTIC;
     localStorage.setItem(key, JSON.stringify(acc));
   },
 
-  // TripSettings
   getTripSettings(): TripSettings {
     const data = localStorage.getItem(STORAGE_KEYS.TRIP_SETTINGS);
     if (!data) {
@@ -213,5 +212,64 @@ export const DB = {
 
   saveTripSettings(settings: TripSettings): void {
     localStorage.setItem(STORAGE_KEYS.TRIP_SETTINGS, JSON.stringify(settings));
+  },
+
+  // --------------------------------------------------------------------------
+  // Supabase Cloud Synchronized Methods (Async Pipeline)
+  // --------------------------------------------------------------------------
+  async fetchMyPlacesAsync(region: RegionType = '국내'): Promise<MyPlace[]> {
+    if (isSupabaseConfigured) {
+      const cloudPlaces = await SupabaseDB.getMyPlaces(region);
+      if (cloudPlaces && cloudPlaces.length > 0) {
+        this.saveMyPlaces(cloudPlaces, region);
+        return cloudPlaces;
+      }
+    }
+    return this.getMyPlaces(region);
+  },
+
+  async addMyPlaceAsync(place: Omit<MyPlace, 'id'>, region: RegionType = '국내'): Promise<MyPlace> {
+    if (isSupabaseConfigured) {
+      const inserted = await SupabaseDB.addMyPlace(place, region);
+      if (inserted) {
+        const places = this.getMyPlaces(region);
+        places.push(inserted);
+        this.saveMyPlaces(places, region);
+        return inserted;
+      }
+    }
+    return this.addMyPlace(place, region);
+  },
+
+  async deleteMyPlaceAsync(id: string, region: RegionType = '국내'): Promise<void> {
+    if (isSupabaseConfigured) {
+      await SupabaseDB.deleteMyPlace(id, region);
+    }
+    this.deleteMyPlace(id, region);
+  },
+
+  async clearMyPlacesAsync(region: RegionType = '국내'): Promise<void> {
+    if (isSupabaseConfigured) {
+      await SupabaseDB.clearMyPlaces(region);
+    }
+    this.clearMyPlaces(region);
+  },
+
+  async fetchAccommodationAsync(region: RegionType = '국내'): Promise<Accommodation> {
+    if (isSupabaseConfigured) {
+      const cloudAcc = await SupabaseDB.getAccommodation(region);
+      if (cloudAcc) {
+        this.saveAccommodation(cloudAcc, region);
+        return cloudAcc;
+      }
+    }
+    return this.getAccommodation(region);
+  },
+
+  async saveAccommodationAsync(acc: Accommodation, region: RegionType = '국내'): Promise<void> {
+    if (isSupabaseConfigured) {
+      await SupabaseDB.saveAccommodation(acc, region);
+    }
+    this.saveAccommodation(acc, region);
   },
 };
