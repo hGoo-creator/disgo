@@ -64,6 +64,12 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     }
   };
 
+  const handleDeleteClick = (id: string, name: string) => {
+    if (window.confirm(`'${name}' 장소를 동선에서 삭제하시겠습니까?`)) {
+      onDeletePlace(id);
+    }
+  };
+
   const currencySymbol = regionType === '해외' ? '¥' : '원';
   const totalCost = items.reduce((sum, item) => sum + (item.cost || 0), 0);
   const placeCount = items.filter((i) => i.type === 'place').length;
@@ -178,14 +184,8 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                   {getCategoryTag(item.category)}
                   {item.type === 'place' ? (
                     <button
-                      onClick={() => onDeletePlace(item.id)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#94a3b8',
-                        cursor: 'pointer',
-                        padding: '2px',
-                      }}
+                      onClick={() => handleDeleteClick(item.id, item.title)}
+                      className="btn-card-delete"
                       title="장소 삭제"
                     >
                       <Trash2 size={13} />

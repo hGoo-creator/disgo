@@ -29,6 +29,12 @@ export const isSupabaseConfigured = Boolean(
     !SUPABASE_ANON_KEY.includes('placeholder')
 );
 
+if (!isSupabaseConfigured) {
+  console.info('[Supabase Info]: Environment variables VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY not configured. Running in LocalStorage offline mode.');
+} else {
+  console.info(`[Supabase Connected]: Target Cloud URL: ${SUPABASE_URL}`);
+}
+
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export const SupabaseDB = {
@@ -36,6 +42,7 @@ export const SupabaseDB = {
   async getMyPlaces(region: RegionType = '국내'): Promise<MyPlace[]> {
     if (!isSupabaseConfigured) return [];
     try {
+      console.info(`[Supabase SELECT]: Fetching places for region: '${region}'`);
       const { data, error } = await supabase
         .from('my_places')
         .select('*')
@@ -43,10 +50,11 @@ export const SupabaseDB = {
         .order('created_at', { ascending: true });
 
       if (error) {
-        console.warn('Supabase fetch MyPlaces error:', error);
+        console.error('[Supabase Error - SELECT my_places]:', error.message || error);
         return [];
       }
 
+      console.info(`[Supabase SELECT Success]: Loaded ${data?.length || 0} places from Cloud DB`);
       return (data || []).map((item: any) => ({
         id: item.id?.toString() || 'place-' + Date.now(),
         place_name: item.place_name,
@@ -56,8 +64,8 @@ export const SupabaseDB = {
         stay_time: parseInt(item.stay_time, 10) || 30,
         cost: parseInt(item.cost, 10) || 0,
       }));
-    } catch (err) {
-      console.warn('Supabase fetch exception:', err);
+    } catch (err: any) {
+      console.error('[Supabase Network/Connection Error]:', err?.message || err);
       return [];
     }
   },
@@ -65,6 +73,7 @@ export const SupabaseDB = {
   async addMyPlace(place: Omit<MyPlace, 'id'>, region: RegionType = '국내'): Promise<MyPlace | null> {
     if (!isSupabaseConfigured) return null;
     try {
+      console.info(`[Supabase INSERT]: Inserting new place '${place.place_name}' into my_places`);
       const payload = {
         place_name: place.place_name,
         category: place.category,
@@ -78,11 +87,12 @@ export const SupabaseDB = {
       const { data, error } = await supabase.from('my_places').insert([payload]).select();
 
       if (error || !data || data.length === 0) {
-        console.warn('Supabase insert place error:', error);
+        console.error('[Supabase Error - INSERT my_places]:', error?.message || error);
         return null;
       }
 
       const inserted = data[0];
+      console.info(`[Supabase INSERT Success]: Inserted row ID #${inserted.id}`);
       return {
         id: inserted.id.toString(),
         place_name: inserted.place_name,
@@ -92,8 +102,8 @@ export const SupabaseDB = {
         stay_time: parseInt(inserted.stay_time, 10),
         cost: parseInt(inserted.cost, 10),
       };
-    } catch (err) {
-      console.warn('Supabase add place exception:', err);
+    } catch (err: any) {
+      console.error('[Supabase Network/Connection Error]:', err?.message || err);
       return null;
     }
   },
@@ -101,19 +111,27 @@ export const SupabaseDB = {
   async deleteMyPlace(id: string, region: RegionType = '국내'): Promise<boolean> {
     if (!isSupabaseConfigured) return false;
     try {
-      const { error } = await supabase
-        .from('my_places')
-        .delete()
-        .eq('id', id)
-        .eq('region_type', region);
+      console.info(`[Supabase DELETE]: Deleting place ID '${id}' from my_places`);
+
+      let query = supabase.from('my_places').delete().eq('region_type', region);
+      const numId = parseInt(id, 10);
+
+      if (!isNaN(numId) && String(numId) === id) {
+        query = query.eq('id', numId);
+      } else {
+        query = query.eq('id', id);
+      }
+
+      const { error } = await query;
 
       if (error) {
-        console.warn('Supabase delete place error:', error);
+        console.error('[Supabase Error - DELETE my_places]:', error.message || error);
         return false;
       }
+      console.info(`[Supabase DELETE Success]: Deleted place ID #${id}`);
       return true;
-    } catch (err) {
-      console.warn('Supabase delete place exception:', err);
+    } catch (err: any) {
+      console.error('[Supabase Network/Connection Error]:', err?.message || err);
       return false;
     }
   },
@@ -121,18 +139,20 @@ export const SupabaseDB = {
   async clearMyPlaces(region: RegionType = '국내'): Promise<boolean> {
     if (!isSupabaseConfigured) return false;
     try {
+      console.info(`[Supabase DELETE ALL]: Clearing all places for region: '${region}'`);
       const { error } = await supabase
         .from('my_places')
         .delete()
         .eq('region_type', region);
 
       if (error) {
-        console.warn('Supabase clear places error:', error);
+        console.error('[Supabase Error - DELETE ALL my_places]:', error.message || error);
         return false;
       }
+      console.info(`[Supabase DELETE ALL Success]: Cleared all places for region '${region}'`);
       return true;
-    } catch (err) {
-      console.warn('Supabase clear places exception:', err);
+    } catch (err: any) {
+      console.error('[Supabase Network/Connection Error]:', err?.message || err);
       return false;
     }
   },
@@ -141,15 +161,20 @@ export const SupabaseDB = {
   async getAccommodation(region: RegionType = '국내'): Promise<Accommodation | null> {
     if (!isSupabaseConfigured) return null;
     try {
+      console.info(`[Supabase SELECT]: Fetching accommodation for region: '${region}'`);
       const { data, error } = await supabase
         .from('accommodations')
         .select('*')
         .eq('region_type', region)
         .limit(1);
 
-      if (error || !data || data.length === 0) return null;
+      if (error || !data || data.length === 0) {
+        if (error) console.error('[Supabase Error - SELECT accommodations]:', error.message || error);
+        return null;
+      }
 
       const item = data[0];
+      console.info(`[Supabase SELECT Success]: Loaded accommodation '${item.hotel_name}'`);
       return {
         id: item.id.toString(),
         hotel_name: item.hotel_name,
@@ -158,8 +183,8 @@ export const SupabaseDB = {
         check_in: item.check_in,
         check_out: item.check_out,
       };
-    } catch (err) {
-      console.warn('Supabase fetch accommodation exception:', err);
+    } catch (err: any) {
+      console.error('[Supabase Network/Connection Error]:', err?.message || err);
       return null;
     }
   },
@@ -167,6 +192,7 @@ export const SupabaseDB = {
   async saveAccommodation(acc: Accommodation, region: RegionType = '국내'): Promise<boolean> {
     if (!isSupabaseConfigured) return false;
     try {
+      console.info(`[Supabase UPSERT]: Saving accommodation '${acc.hotel_name}'`);
       const payload = {
         hotel_name: acc.hotel_name,
         latitude: acc.latitude,
@@ -178,12 +204,13 @@ export const SupabaseDB = {
 
       const { error } = await supabase.from('accommodations').upsert([payload]);
       if (error) {
-        console.warn('Supabase save accommodation error:', error);
+        console.error('[Supabase Error - UPSERT accommodations]:', error.message || error);
         return false;
       }
+      console.info(`[Supabase UPSERT Success]: Saved accommodation '${acc.hotel_name}'`);
       return true;
-    } catch (err) {
-      console.warn('Supabase save accommodation exception:', err);
+    } catch (err: any) {
+      console.error('[Supabase Network/Connection Error]:', err?.message || err);
       return false;
     }
   },

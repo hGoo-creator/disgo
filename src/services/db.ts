@@ -215,15 +215,14 @@ export const DB = {
   },
 
   // --------------------------------------------------------------------------
-  // Supabase Cloud Synchronized Methods (Async Pipeline)
+  // Supabase Cloud Synchronized Methods (Primary Cloud Source of Truth)
   // --------------------------------------------------------------------------
   async fetchMyPlacesAsync(region: RegionType = '국내'): Promise<MyPlace[]> {
     if (isSupabaseConfigured) {
       const cloudPlaces = await SupabaseDB.getMyPlaces(region);
-      if (cloudPlaces && cloudPlaces.length > 0) {
-        this.saveMyPlaces(cloudPlaces, region);
-        return cloudPlaces;
-      }
+      // Sync cloud places to local cache
+      this.saveMyPlaces(cloudPlaces, region);
+      return cloudPlaces;
     }
     return this.getMyPlaces(region);
   },
