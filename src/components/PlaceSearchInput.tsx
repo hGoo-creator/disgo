@@ -49,6 +49,7 @@ export const PlaceSearchInput: React.FC<PlaceSearchInputProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<PlaceSearchResult | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [apiError, setApiError] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -101,7 +102,10 @@ export const PlaceSearchInput: React.FC<PlaceSearchInputProps> = ({
 
         setSuggestions(combined.slice(0, 6));
         setIsOpen(true);
+        setApiError(false);
       } catch (err) {
+        console.error("Place search API error:", err);
+        setApiError(true);
         // Fallback to presets if network fetch fails
         setSuggestions(matchedPresets.slice(0, 5));
         setIsOpen(matchedPresets.length > 0);
@@ -159,7 +163,7 @@ export const PlaceSearchInput: React.FC<PlaceSearchInputProps> = ({
             background: '#0f172a',
             border: '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: '10px',
-            zIndex: 3000,
+            zIndex: 9999,
             maxHeight: '220px',
             overflowY: 'auto',
             boxShadow: '0 10px 25px rgba(0, 0, 0, 0.8)',
@@ -190,6 +194,12 @@ export const PlaceSearchInput: React.FC<PlaceSearchInputProps> = ({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {apiError && (
+        <div style={{ marginTop: '6px', fontSize: '0.75rem', color: '#ef4444', fontWeight: 'bold' }}>
+          ⚠️ Google Maps API Key를 Vercel에 설정해 주세요.
         </div>
       )}
 
