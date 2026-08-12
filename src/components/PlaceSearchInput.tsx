@@ -80,19 +80,67 @@ export const PlaceSearchInput: React.FC<PlaceSearchInputProps> = ({
     const timer = setTimeout(async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&accept-language=ko`
-        );
-        const data = await response.json();
+        let apiResults: PlaceSearchResult[] = [];
 
-        const apiResults: PlaceSearchResult[] = data.map((item: any) => ({
-          name: item.display_name.split(',')[0] || item.name || query,
-          display_name: item.display_name,
-          lat: parseFloat(item.lat),
-          lng: parseFloat(item.lon),
-        }));
+        // 1. Google Maps API가 로드되어 있다면 Google Places API 최우선 사용 (해외 검색 최적화)
+        // @ts-ignore
+        if (window.google && window.google.maps && window.google.maps.places) {
+          apiResults = await new Promise<PlaceSearchResult[]>((resolve, reject) => {
+            // @ts-ignore
+            const service = new window.google.maps.places.AutocompleteService();
+            service.getPlacePredictions({
+              input: query,
+              // 사용자 요청: 위치 편향(Location Bias) 및 바운드 완전 해제
+              // bounds, location 속성을 의도적으로 제외하여 전 세계 글로벌 검색 우선
+              types: ['establishment', 'geocode'],
+              language: 'ko' // 한글 기반 검색 최우선
+            }, async (predictions: any, status: any) => {
+              // @ts-ignore
+              if (status !== window.google.maps.places.PlacesServiceStatus.OK || !predictions) {
+                return reject("Google API No Results");
+              }
+              
+              // @ts-ignore
+              const geocoder = new window.google.maps.Geocoder();
+              const results: PlaceSearchResult[] = [];
+              
+              // 상위 5개 결과에 대해 좌표(lat, lng) 변환 수행
+              for (const p of predictions.slice(0, 5)) {
+                try {
+                  const geoRes = await geocoder.geocode({ placeId: p.place_id });
+                  if (geoRes.results[0]) {
+                    const loc = geoRes.results[0].geometry.location;
+                    results.push({
+                      name: p.structured_formatting.main_text,
+                      display_name: p.description,
+                      lat: loc.lat(),
+                      lng: loc.lng()
+                    });
+                  }
+                } catch (e) {
+                  console.warn("Geocode error for placeId:", p.place_id);
+                }
+              }
+              resolve(results);
+            });
+          });
+        } 
+        // 2. Google Maps API가 없다면 기존 Nominatim OSM API(무료 글로벌) 폴백 사용
+        else {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&accept-language=ko`
+          );
+          if (!response.ok) throw new Error("Nominatim API Error");
+          const data = await response.json();
+          apiResults = data.map((item: any) => ({
+            name: item.display_name.split(',')[0] || item.name || query,
+            display_name: item.display_name,
+            lat: parseFloat(item.lat),
+            lng: parseFloat(item.lon),
+          }));
+        }
 
-        // Combine preset matches with online geocoding results (deduplicated)
+        // Combine preset matches with online results (deduplicated)
         const combined = [...matchedPresets];
         apiResults.forEach((apiItem) => {
           if (!combined.some((c) => Math.abs(c.lat - apiItem.lat) < 0.001 && Math.abs(c.lng - apiItem.lng) < 0.001)) {
@@ -105,8 +153,8 @@ export const PlaceSearchInput: React.FC<PlaceSearchInputProps> = ({
         setApiError(false);
       } catch (err) {
         console.error("Place search API error:", err);
+        // Google API 키 오류 또는 네트워크 오류 시 경고
         setApiError(true);
-        // Fallback to presets if network fetch fails
         setSuggestions(matchedPresets.slice(0, 5));
         setIsOpen(matchedPresets.length > 0);
       } finally {
