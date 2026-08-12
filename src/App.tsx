@@ -53,6 +53,34 @@ export function App() {
     }
   };
 
+  // URL Sharing Parse Effect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const shareIdsParam = params.get('share');
+    if (shareIdsParam) {
+      const shareIds = shareIdsParam.split(',');
+      const hasShared = myPlaces.some(p => p.isShared);
+      if (!hasShared && shareIds.length > 0) {
+        DB.fetchSharedPlacesAsync(shareIds).then((sharedPlaces) => {
+          if (sharedPlaces.length > 0) {
+            const existingIds = new Set(myPlaces.map(p => p.id));
+            const newPlaces = sharedPlaces.filter(p => !existingIds.has(p.id));
+            
+            if (newPlaces.length > 0) {
+              const updatedPlaces = [...myPlaces, ...newPlaces];
+              setMyPlaces(updatedPlaces);
+              DB.saveMyPlaces(updatedPlaces, tripSettings.region_type);
+              alert(`${newPlaces.length}개의 공유된 장소가 일정에 추가되었습니다!`);
+            }
+          }
+          window.history.replaceState({}, document.title, window.location.pathname);
+        });
+      }
+    }
+  }, [myPlaces.length, tripSettings.region_type]);
+
+
+
   // Add Place handler (Supabase INSERT + Local state sync)
   const handleAddPlace = async (newPlaceData: Omit<MyPlace, 'id'>) => {
     await DB.addMyPlaceAsync(newPlaceData, tripSettings.region_type);
@@ -65,6 +93,13 @@ export function App() {
     await DB.deleteMyPlaceAsync(id, tripSettings.region_type);
     const updatedPlaces = await DB.fetchMyPlacesAsync(tripSettings.region_type);
     setMyPlaces(updatedPlaces);
+  };
+
+  // Reorder / Update Multiple Places (for Drag and Drop)
+  const handleUpdatePlaces = async (updatedPlaces: MyPlace[]) => {
+    setMyPlaces(updatedPlaces);
+    DB.saveMyPlaces(updatedPlaces, tripSettings.region_type);
+    // Ideally we'd sync this batch update to Supabase here
   };
 
   // Reset All Places handler (Supabase DELETE ALL + Local clear)
@@ -108,6 +143,16 @@ export function App() {
         onOpenAddPlace={() => setIsPlaceModalOpen(true)}
         onOpenAccommodation={() => setIsAccModalOpen(true)}
         onResetPlaces={handleResetPlaces}
+        onShare={() => {
+          const idsToShare = myPlaces.map(p => p.id).join(',');
+          if (!idsToShare) {
+            alert('공유할 장소가 없습니다!');
+            return;
+          }
+          const shareUrl = `${window.location.origin}${window.location.pathname}?share=${idsToShare}`;
+          navigator.clipboard.writeText(shareUrl);
+          alert('일정 공유 링크가 클립보드에 복사되었습니다!\n' + shareUrl);
+        }}
       />
 
       {/* App Content Split Container */}
@@ -118,6 +163,7 @@ export function App() {
         {/* 3. Bottom Timeline List View with Day Tabs & Duration Recommendation */}
         <TimelineView
           items={activeTimelineItems}
+          allPlaces={myPlaces}
           totalDays={multiDayResult.totalDays}
           activeDay={activeDay}
           onSelectDay={setActiveDay}
@@ -125,6 +171,7 @@ export function App() {
           regionType={tripSettings.region_type}
           transportType={tripSettings.transport}
           onDeletePlace={handleDeletePlace}
+          onUpdatePlaces={handleUpdatePlaces}
         />
       </div>
 

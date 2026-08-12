@@ -12,6 +12,9 @@ export interface MyPlace {
   longitude: number;
   stay_time: number; // 분 단위
   cost: number; // 예상 비용 (원 또는 해당통화)
+  dayNumber?: number; // 일자(Day) 할당
+  isShared?: boolean; // 공유받은 장소인지 여부
+  order?: number; // 순서 보정용
 }
 
 export interface Accommodation {
@@ -43,6 +46,7 @@ export interface TimelineItem {
   warningText?: string;
   transitMode?: TransportType;
   dayNumber?: number; // Day 1, Day 2...
+  isShared?: boolean;
 }
 
 export interface MultiDayTimelineResult {

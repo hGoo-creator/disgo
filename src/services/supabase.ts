@@ -70,6 +70,38 @@ export const SupabaseDB = {
     }
   },
 
+  async getPlacesByIds(ids: string[]): Promise<MyPlace[]> {
+    if (!isSupabaseConfigured || ids.length === 0) return [];
+    try {
+      console.info(`[Supabase SELECT]: Fetching places by IDs: ${ids.join(', ')}`);
+      const numericIds = ids.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+      
+      const { data, error } = await supabase
+        .from('my_places')
+        .select('*')
+        .in('id', numericIds);
+
+      if (error) {
+        console.error('[Supabase Error - SELECT IN my_places]:', error.message || error);
+        return [];
+      }
+
+      return (data || []).map((item: any) => ({
+        id: item.id?.toString() || 'place-' + Date.now(),
+        place_name: item.place_name,
+        category: item.category,
+        latitude: parseFloat(item.latitude),
+        longitude: parseFloat(item.longitude),
+        stay_time: parseInt(item.stay_time, 10) || 30,
+        cost: parseInt(item.cost, 10) || 0,
+        isShared: true
+      }));
+    } catch (err: any) {
+      console.error('[Supabase Network/Connection Error]:', err?.message || err);
+      return [];
+    }
+  },
+
   async addMyPlace(place: Omit<MyPlace, 'id'>, region: RegionType = '국내'): Promise<MyPlace | null> {
     if (!isSupabaseConfigured) return null;
     try {

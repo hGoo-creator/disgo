@@ -44,29 +44,37 @@ export function generateSingleDayTimeline(
 ): TimelineItem[] {
   if (places.length === 0) return [];
 
-  const restaurants = places.filter((p) => p.category === '식당');
-  const nonRestaurants = places.filter((p) => p.category !== '식당');
+  let orderedPlaces: MyPlace[] = [];
+  
+  // 만약 장소들에 사용자가 직접 지정한 순서(order)가 하나라도 있다면 그 순서를 우선 따름 (새 장소는 맨 끝으로)
+  const someOrdered = places.some(p => p.order !== undefined);
+  
+  if (someOrdered) {
+    orderedPlaces = [...places].sort((a, b) => {
+      const orderA = a.order !== undefined ? a.order : Infinity;
+      const orderB = b.order !== undefined ? b.order : Infinity;
+      return orderA - orderB;
+    });
+  } else {
+    // TSP (Nearest Neighbor) 알고리즘
+    const unvisited = [...places];
+    let currLat = accommodation.latitude;
+    let currLng = accommodation.longitude;
 
-  const orderedPlaces: MyPlace[] = [];
-  const rQueue = [...restaurants];
-  const nQueue = [...nonRestaurants];
-
-  // Interleave places to strictly prevent back-to-back restaurants
-  while (rQueue.length > 0 || nQueue.length > 0) {
-    const lastIsRestaurant = orderedPlaces.length > 0 && orderedPlaces[orderedPlaces.length - 1].category === '식당';
-
-    if (lastIsRestaurant) {
-      if (nQueue.length > 0) {
-        orderedPlaces.push(nQueue.shift()!);
-      } else if (rQueue.length > 0) {
-        orderedPlaces.push(rQueue.shift()!);
+    while (unvisited.length > 0) {
+      let nearestIdx = 0;
+      let minDist = Infinity;
+      for (let i = 0; i < unvisited.length; i++) {
+        const dist = calculateDistance(currLat, currLng, unvisited[i].latitude, unvisited[i].longitude);
+        if (dist < minDist) {
+          minDist = dist;
+          nearestIdx = i;
+        }
       }
-    } else {
-      if (rQueue.length > 0) {
-        orderedPlaces.push(rQueue.shift()!);
-      } else if (nQueue.length > 0) {
-        orderedPlaces.push(nQueue.shift()!);
-      }
+      const nextPlace = unvisited.splice(nearestIdx, 1)[0];
+      orderedPlaces.push(nextPlace);
+      currLat = nextPlace.latitude;
+      currLng = nextPlace.longitude;
     }
   }
 
@@ -138,6 +146,7 @@ export function generateSingleDayTimeline(
       transitMode: settings.transport,
       warningText: parkingHint,
       dayNumber: dayNum,
+      isShared: place.isShared,
     });
 
     currentTime = addMinutesToTime(currentTime, place.stay_time);
@@ -176,26 +185,36 @@ export function generateSingleDayTimeline(
 
 export function generateMultiDayTimeline(
   places: MyPlace[],
-  accommodation: Accommodation,
+  accommodation: Accommodation | null,
   settings: TripSettings
 ): MultiDayTimelineResult {
-  if (places.length === 0) {
+  if (places.length === 0 || !accommodation) {
     return {
       totalDays: 1,
-      suggestedDurationText: '',
+      suggestedDurationText: getSuggestedDurationText(places.length),
       dayTimelines: { 1: [] },
     };
   }
 
+  // 사용자가 명시적으로 dayNumber를 지정한 경우 그 일자에 할당, 없으면 자동 분배
+  const maxDayAssigned = Math.max(1, ...places.map(p => p.dayNumber || 1));
   const placesPerDay = 4;
-  const totalDays = Math.max(1, Math.ceil(places.length / placesPerDay));
+  const autoTotalDays = Math.max(1, Math.ceil(places.length / placesPerDay));
+  const totalDays = Math.max(maxDayAssigned, autoTotalDays);
+  
   const suggestedDurationText = getSuggestedDurationText(places.length);
 
   const dayTimelines: Record<number, TimelineItem[]> = {};
 
   for (let d = 1; d <= totalDays; d++) {
-    const startIndex = (d - 1) * placesPerDay;
-    const dayPlaces = places.slice(startIndex, startIndex + placesPerDay);
+    // 1. dayNumber가 명시된 장소 필터링
+    let dayPlaces = places.filter(p => p.dayNumber === d);
+    
+    // 2. 만약 하나도 명시되지 않은 기존 방식이라면, 4개씩 분할 (호환성)
+    if (places.every(p => !p.dayNumber)) {
+      const startIndex = (d - 1) * placesPerDay;
+      dayPlaces = places.slice(startIndex, startIndex + placesPerDay);
+    }
 
     if (dayPlaces.length > 0) {
       dayTimelines[d] = generateSingleDayTimeline(dayPlaces, accommodation, settings, d);

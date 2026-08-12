@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
+import 'leaflet-routing-machine';
 import { TimelineItem } from '../types';
 import { LocateFixed, Loader2 } from 'lucide-react';
 
@@ -11,6 +12,7 @@ export const MapView: React.FC<MapViewProps> = ({ timelineItems }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
+  const routingControlRef = useRef<L.Routing.Control | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
   const [isLocating, setIsLocating] = useState(false);
 
@@ -139,14 +141,31 @@ export const MapView: React.FC<MapViewProps> = ({ timelineItems }) => {
       }
     });
 
-    if (latLngs.length > 1 && layerGroup) {
-      const polyline = L.polyline(latLngs, {
-        color: '#10b981',
-        weight: 3.5,
-        opacity: 0.85,
-        dashArray: '6, 8',
-      });
-      polyline.addTo(layerGroup);
+    if (routingControlRef.current && map) {
+      map.removeControl(routingControlRef.current);
+      routingControlRef.current = null;
+    }
+
+    if (latLngs.length > 1 && map) {
+      const waypoints = latLngs.map((ll) => L.latLng(ll[0], ll[1]));
+
+      routingControlRef.current = L.Routing.control({
+        waypoints,
+        router: L.Routing.osrmv1({
+          serviceUrl: 'https://router.project-osrm.org/route/v1',
+          profile: 'driving' // You could map this based on transport settings if passed
+        }),
+        lineOptions: {
+          styles: [{ color: '#10b981', weight: 4, opacity: 0.85 }],
+          extendToWaypoints: true,
+          missingRouteTolerance: 0
+        },
+        show: false, // hide instructions panel
+        addWaypoints: false,
+        routeWhileDragging: false,
+        fitSelectedRoutes: false,
+        createMarker: () => null // don't create additional markers
+      }).addTo(map);
     }
 
     if (latLngs.length > 0) {

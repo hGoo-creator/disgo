@@ -8,6 +8,7 @@ interface TopHeaderProps {
   onOpenAddPlace: () => void;
   onOpenAccommodation: () => void;
   onResetPlaces: () => void;
+  onShare: () => void;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
@@ -16,6 +17,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onOpenAddPlace,
   onOpenAccommodation,
   onResetPlaces,
+  onShare,
 }) => {
   const setRegion = (region_type: RegionType) => {
     onUpdateSettings({
@@ -48,6 +50,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         </div>
 
         <div className="header-actions">
+          <button className="btn-icon-sm" onClick={onShare} title="일정 공유">
+            <Globe size={12} />
+            <span>공유</span>
+          </button>
           <button className="btn-icon-sm" onClick={onOpenAccommodation} title="숙소 수정">
             <Hotel size={12} />
             <span>숙소</span>
