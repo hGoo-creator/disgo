@@ -1,14 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet-routing-machine';
-import { TimelineItem } from '../types';
+import { TimelineItem, TransportType } from '../types';
 import { LocateFixed, Loader2 } from 'lucide-react';
 
 interface MapViewProps {
   timelineItems: TimelineItem[];
+  transportType: TransportType;
 }
 
-export const MapView: React.FC<MapViewProps> = ({ timelineItems }) => {
+export const MapView: React.FC<MapViewProps> = ({ timelineItems, transportType }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
@@ -149,11 +150,18 @@ export const MapView: React.FC<MapViewProps> = ({ timelineItems }) => {
     if (latLngs.length > 1 && map) {
       const waypoints = latLngs.map((ll) => L.latLng(ll[0], ll[1]));
 
+      const profileMap: Record<TransportType, string> = {
+        '차량': 'driving',
+        '도보': 'walking',
+        '대중교통': 'driving' // OSRM lacks transit, fallback to driving
+      };
+      const profile = profileMap[transportType] || 'driving';
+
       routingControlRef.current = L.Routing.control({
         waypoints,
         router: L.Routing.osrmv1({
           serviceUrl: 'https://router.project-osrm.org/route/v1',
-          profile: 'driving' // You could map this based on transport settings if passed
+          profile: profile
         }),
         lineOptions: {
           styles: [{ color: '#10b981', weight: 4, opacity: 0.85 }],
@@ -172,7 +180,7 @@ export const MapView: React.FC<MapViewProps> = ({ timelineItems }) => {
       const bounds = L.latLngBounds(latLngs);
       map.fitBounds(bounds, { padding: [35, 35] });
     }
-  }, [timelineItems]);
+  }, [timelineItems, transportType]);
 
   // Action: Fetch real-time GPS coordinates & Pan map center
   const handleGoToCurrentLocation = () => {

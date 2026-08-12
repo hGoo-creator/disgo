@@ -158,7 +158,7 @@ export function App() {
       {/* App Content Split Container */}
       <div className="app-content-split">
         {/* 2. Top 30% Google Maps View (Shows active day's pins & route) */}
-        <MapView timelineItems={activeTimelineItems} />
+        <MapView timelineItems={activeTimelineItems} transportType={tripSettings.transport} />
 
         {/* 3. Bottom Timeline List View with Day Tabs & Duration Recommendation */}
         <TimelineView

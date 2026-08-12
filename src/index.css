@@ -262,36 +262,44 @@ input:checked + .slider:before {
   box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
 }
 
-/* App Main Content Split: Top 30% Map View, Bottom Fill Timeline List */
+/* App Main Content Split: Full Screen Map & Bottom Sheet Timeline */
 .app-content-split {
   flex: 1;
-  min-height: 0; /* CRITICAL FOR FLEXBOX: prevents flex child from pushing parent out of bounds */
-  display: flex;
-  flex-direction: column;
+  min-height: 0;
   position: relative;
   overflow: hidden;
   width: 100%;
 }
 
 .map-view-container {
-  height: 30%;
-  min-height: 30%;
-  max-height: 30%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   width: 100%;
-  position: relative;
-  border-bottom: 2px solid rgba(16, 185, 129, 0.25);
+  height: 100%;
   z-index: 10;
-  flex-shrink: 0;
 }
 
 .timeline-view-container {
-  flex: 1;
-  min-height: 0; /* CRITICAL FOR SCROLLING INSIDE FLEX CHILD */
-  width: 100%;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 45%;
+  max-height: 45%;
+  z-index: 20;
+  background: rgba(7, 12, 24, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.7);
+  padding: 16px 12px calc(28px + env(safe-area-inset-bottom)) 12px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  background: var(--bg-primary);
-  padding: 10px 10px calc(28px + env(safe-area-inset-bottom)) 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;

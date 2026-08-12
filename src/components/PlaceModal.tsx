@@ -22,24 +22,48 @@ export const PlaceModal: React.FC<PlaceModalProps> = ({ isOpen, onClose, onAddPl
     setLng(selectedLng);
   };
 
-  // 3. 스마트 장소 추가 알고리즘 (Smart Auto-Assign)
+  // 3. 스마트 장소 추가 알고리즘 (Smart Auto-Assign 심화)
   const autoAssignDetails = (name: string): { category: PlaceCategory; stay_time: number; cost: number } => {
     const text = name.toLowerCase();
     
+    // Hash function for deterministic pseudo-random values based on name
+    const hash = Array.from(name).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    
     // 식당 키워드
-    if (text.includes('식당') || text.includes('가든') || text.includes('해장국') || text.includes('라멘') || text.includes('규카츠') || text.includes('고기') || text.includes('횟집') || text.includes('맛집')) {
-      return { category: '식당', stay_time: 60, cost: 20000 };
+    if (text.includes('식당') || text.includes('가든') || text.includes('해장국') || text.includes('라멘') || text.includes('규카츠') || text.includes('고기') || text.includes('횟집') || text.includes('맛집') || text.includes('스시') || text.includes('초밥')) {
+      const costs = [15000, 18000, 22000, 28000, 35000];
+      const times = [45, 60, 90];
+      return { category: '식당', stay_time: times[hash % times.length], cost: costs[hash % costs.length] };
     }
     // 카페 키워드
-    if (text.includes('카페') || text.includes('커피') || text.includes('베이커리') || text.includes('다방') || text.includes('스타벅스') || text.includes('블루보틀')) {
-      return { category: '카페', stay_time: 45, cost: 6500 };
+    if (text.includes('카페') || text.includes('커피') || text.includes('베이커리') || text.includes('다방') || text.includes('스타벅스') || text.includes('블루보틀') || text.includes('디저트')) {
+      const costs = [5000, 6500, 8000, 12000];
+      const times = [30, 45, 60];
+      return { category: '카페', stay_time: times[hash % times.length], cost: costs[hash % costs.length] };
     }
     // 간식 키워드
-    if (text.includes('떡') || text.includes('아이스크림') || text.includes('시장') || text.includes('포장마차') || text.includes('김밥')) {
-      return { category: '간식', stay_time: 30, cost: 5000 };
+    if (text.includes('떡') || text.includes('아이스크림') || text.includes('시장') || text.includes('포장마차') || text.includes('김밥') || text.includes('베이크') || text.includes('타코야끼')) {
+      const costs = [3000, 4500, 6000, 8000];
+      const times = [15, 20, 30];
+      return { category: '간식', stay_time: times[hash % times.length], cost: costs[hash % costs.length] };
     }
-    // 기본(명소) 키워드
-    return { category: '명소', stay_time: 90, cost: 0 };
+    // 숙소 키워드
+    if (text.includes('호텔') || text.includes('리조트') || text.includes('펜션') || text.includes('스테이') || text.includes('하얏트') || text.includes('신라') || text.includes('여관')) {
+      const costs = [120000, 180000, 250000, 350000];
+      return { category: '숙소', stay_time: 720, cost: costs[hash % costs.length] };
+    }
+    
+    // 명소/액티비티 (유료)
+    const isActivity = text.includes('월드') || text.includes('파크') || text.includes('랜드') || text.includes('아쿠아') || text.includes('투어') || text.includes('뮤지엄') || text.includes('박물관');
+    if (isActivity) {
+      const costs = [15000, 25000, 45000];
+      const times = [90, 120, 180];
+      return { category: '명소', stay_time: times[hash % times.length], cost: costs[hash % costs.length] };
+    }
+
+    // 기본 명소 (자연 경관 등 - 무료)
+    const times = [60, 90, 120];
+    return { category: '명소', stay_time: times[hash % times.length], cost: 0 };
   };
 
   const handleSubmit = (e: React.FormEvent) => {
