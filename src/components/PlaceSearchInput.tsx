@@ -49,7 +49,7 @@ export const PlaceSearchInput: React.FC<PlaceSearchInputProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<PlaceSearchResult | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [apiError, setApiError] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -79,6 +79,7 @@ export const PlaceSearchInput: React.FC<PlaceSearchInputProps> = ({
 
     const timer = setTimeout(async () => {
       setIsLoading(true);
+      setApiError(null);
       try {
         let apiResults: PlaceSearchResult[] = [];
 
@@ -97,7 +98,7 @@ export const PlaceSearchInput: React.FC<PlaceSearchInputProps> = ({
             }, async (predictions: any, status: any) => {
               // @ts-ignore
               if (status !== window.google.maps.places.PlacesServiceStatus.OK || !predictions) {
-                return reject("Google API No Results");
+                return reject(`Google Places API Error: ${status}`);
               }
               
               // @ts-ignore
@@ -117,8 +118,8 @@ export const PlaceSearchInput: React.FC<PlaceSearchInputProps> = ({
                       lng: loc.lng()
                     });
                   }
-                } catch (e) {
-                  console.warn("Geocode error for placeId:", p.place_id);
+                } catch (e: any) {
+                  console.warn("Geocode error for placeId:", p.place_id, e);
                 }
               }
               resolve(results);
@@ -130,7 +131,7 @@ export const PlaceSearchInput: React.FC<PlaceSearchInputProps> = ({
           const response = await fetch(
             `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&accept-language=ko`
           );
-          if (!response.ok) throw new Error("Nominatim API Error");
+          if (!response.ok) throw new Error(`Nominatim HTTP Error: ${response.status}`);
           const data = await response.json();
           apiResults = data.map((item: any) => ({
             name: item.display_name.split(',')[0] || item.name || query,
@@ -150,11 +151,10 @@ export const PlaceSearchInput: React.FC<PlaceSearchInputProps> = ({
 
         setSuggestions(combined.slice(0, 6));
         setIsOpen(true);
-        setApiError(false);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Place search API error:", err);
-        // Google API 키 오류 또는 네트워크 오류 시 경고
-        setApiError(true);
+        const errorMsg = typeof err === 'string' ? err : (err.message || 'Unknown API Error');
+        setApiError(`API Error: ${errorMsg}. Please check console.`);
         setSuggestions(matchedPresets.slice(0, 5));
         setIsOpen(matchedPresets.length > 0);
       } finally {
@@ -247,7 +247,7 @@ export const PlaceSearchInput: React.FC<PlaceSearchInputProps> = ({
 
       {apiError && (
         <div style={{ marginTop: '6px', fontSize: '0.75rem', color: '#ef4444', fontWeight: 'bold' }}>
-          ⚠️ Google Maps API Key를 Vercel에 설정해 주세요.
+          ⚠️ {apiError}
         </div>
       )}
 
