@@ -151,14 +151,14 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       ) : null}
 
       {totalDays >= 1 ? (
-        <div style={{ display: 'flex', gap: '4px', background: '#1e293b', padding: '3px', borderRadius: '10px', marginBottom: '4px', overflowX: 'auto' }}>
+        <div style={{ display: 'flex', gap: '6px', background: '#1e293b', padding: '6px', borderRadius: '12px', marginBottom: '12px', overflowX: 'auto', overflowY: 'hidden', flexShrink: 0, minHeight: '52px' }}>
           {Array.from({ length: totalDays }, (_, i) => i + 1).map((d) => (
             <button
               key={d}
               onClick={() => onSelectDay(d)}
-              style={{ flex: 1, minWidth: '70px', border: 'none', background: activeDay === d ? '#10b981' : 'transparent', color: activeDay === d ? '#022c22' : '#94a3b8', fontWeight: activeDay === d ? 800 : 600, fontSize: '0.72rem', padding: '4px 8px', borderRadius: '7px', cursor: 'pointer', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+              style={{ flex: 1, minWidth: '85px', border: 'none', background: activeDay === d ? '#10b981' : 'transparent', color: activeDay === d ? '#022c22' : '#94a3b8', fontWeight: activeDay === d ? 800 : 600, fontSize: '0.85rem', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
             >
-              <Calendar size={11} />
+              <Calendar size={14} />
               <span>Day {d}</span>
             </button>
           ))}
@@ -169,7 +169,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
               onUpdatePlaces([...allPlaces, emptyPlace]);
               setTimeout(() => onDeletePlace(emptyPlace.id), 100);
             }}
-            style={{ flex: 1, minWidth: '40px', border: '1px dashed #475569', background: 'transparent', color: '#94a3b8', fontWeight: 600, fontSize: '0.72rem', padding: '4px 8px', borderRadius: '7px', cursor: 'pointer' }}
+            style={{ flex: '0 0 auto', minWidth: '52px', border: '1px dashed #475569', background: 'transparent', color: '#94a3b8', fontWeight: 600, fontSize: '1.2rem', padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             +
           </button>
